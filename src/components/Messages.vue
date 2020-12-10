@@ -1,6 +1,6 @@
 <template>
   <div
-    class="flex flex-col h-full my-2 w-96 bg-white px-4 py-6 shadow-xl rounded-md"
+    class="flex flex-col h-full my-2 w-full md:w-96 bg-white px-4 py-6 shadow-xl rounded-md"
   >
     <div class="flex flex-row items-center py-4 px-6 rounded-2xl shadow">
       <div
@@ -38,31 +38,53 @@
         </ul>
       </div>
     </div>
-    <div
+    <ul
       id="container"
       class="w-full flex-auto overflow-hidden flex flex-col pr-1 overflow-y-scroll"
     >
-      <div v-for="message in messages" class="pt-2 py-4">
-        <div class="h-full overflow-y-auto">
-          <div class="grid grid-cols-12 gap-y-2">
-            <div class="col-start-6 col-end-13 p-1 rounded-lg">
-              <div class="flex items-center justify-start flex-row-reverse">
-                <div
-                  class="flex items-center justify-center h-10 w-10 rounded-full bg-indigo-500 text-white flex-shrink-0"
-                >
-                  {{ message.nickname }}
-                </div>
-                <div
-                  class="relative mr-3 text-sm bg-indigo-100 py-2 px-4 shadow rounded-xl"
-                >
-                  <div>{{ message.text }}</div>
+      <template v-for="message in messages">
+        <li class="pt-2 py-4 select-none" @dblclick="onShowRemove(message)">
+          <div class="h-full overflow-y-auto">
+            <div class="grid grid-cols-12 gap-y-2">
+              <div class="col-start-6 col-end-13 p-1 rounded-lg">
+                <div class="flex items-center justify-start flex-row-reverse">
+                  <div
+                    class="flex items-center justify-center h-10 w-10 rounded-full bg-indigo-500 text-white flex-shrink-0 select-none"
+                  >
+                    {{ message.nickname }}
+                  </div>
+                  <div
+                    class="relative mr-3 text-sm bg-indigo-100 py-2 px-4 shadow rounded-xl"
+                  >
+                    <div>{{ message.text }}</div>
+                  </div>
+                  <span
+                    v-if="isCurrentMessageDetailsVisible(message)"
+                    class="mr-2 text-gray-400"
+                    @click="onDeleteMessage(message)"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="w-5 h-5"
+                      viewBox="0 0 24 24"
+                      stroke-width="1.5"
+                      stroke="currentColor"
+                      fill="none"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path stroke="none" d="M0 0h24v24H0z" />
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </span>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
+        </li>
+      </template>
+    </ul>
     <form class="flex flex-row items-center" @submit.prevent="storeMessage">
       <div
         class="flex flex-row items-center w-full border rounded-3xl h-12 px-2"
@@ -164,13 +186,24 @@ export default {
       messages: [],
       currentMessage: "",
       nickname: "You",
+      currentMessageIndex: "",
       database: firebase.database()
     };
   },
 
   created() {
-    this.database.ref("messages").on("child_added", snapshot => {
-      this.messages.push(snapshot.val());
+    const ref = this.database.ref("messages");
+
+    ref.on("child_added", snapshot => {
+      this.messages.push({ ...snapshot.val(), id: snapshot.key });
+    });
+
+    ref.on("child_removed", snapshot => {
+      const deletedMessage = this.messages.find(
+        message => message.id === snapshot.key
+      );
+      const index = this.messages.indexOf(deletedMessage);
+      this.messages.splice(index, 1);
     });
   },
 
@@ -189,6 +222,21 @@ export default {
     updateScroll(e) {
       const container = document.getElementById("container");
       container.scrollTop = container.scrollHeight;
+    },
+
+    onShowRemove(message) {
+      this.currentMessageIndex = message.id;
+    },
+
+    isCurrentMessageDetailsVisible(message) {
+      return this.currentMessageIndex === message.id;
+    },
+
+    onDeleteMessage(message) {
+      this.database
+        .ref("messages")
+        .child(message.id)
+        .remove();
     }
   }
 };

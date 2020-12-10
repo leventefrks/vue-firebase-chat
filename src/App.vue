@@ -1,6 +1,8 @@
 <template>
   <div id="app">
-    <main class="w-full h-screen flex flex-col items-center py-8 bg-purple-200">
+    <main
+      class="w-full h-screen flex flex-col items-center py-8 md:px-0 px-2 bg-purple-200"
+    >
       <messages />
     </main>
   </div>
