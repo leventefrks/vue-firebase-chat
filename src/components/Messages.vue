@@ -8,7 +8,7 @@
       ></div>
       <div class="flex flex-col ml-3">
         <div class="font-semibold text-sm">Vuejs & Firebase</div>
-        <div class="text-xs text-gray-500">Tutorial</div>
+        <div class="text-xs text-gray-500">Chat Application</div>
       </div>
       <div class="ml-auto">
         <ul class="flex flex-row items-center space-x-2">
@@ -56,28 +56,66 @@
                   <div
                     class="relative mr-3 text-sm bg-indigo-100 py-2 px-4 shadow rounded-xl"
                   >
-                    <div>{{ message.text }}</div>
+                    <div v-if="message !== editedMessage">
+                      {{ message.text }}
+                    </div>
+                    <div v-else="editedMessage">
+                      <textarea
+                        v-model="message.text"
+                        class="h-6 px-2 bg-white resize-none border rounded-md"
+                      />
+                    </div>
                   </div>
-                  <span
-                    v-if="isCurrentMessageDetailsVisible(message)"
-                    class="mr-2 text-gray-400"
-                    @click="onDeleteMessage(message)"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      class="w-5 h-5"
-                      viewBox="0 0 24 24"
-                      stroke-width="1.5"
-                      stroke="currentColor"
-                      fill="none"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
+                  <div class="flex flex-col items-center text-xs">
+                    <button
+                      v-if="
+                        isCurrentMessageDetailsVisible(message) &&
+                          !editedMessage
+                      "
+                      class="mr-2 text-gray-400 cursor-pointer"
+                      @click="onEditMessage(message)"
                     >
-                      <path stroke="none" d="M0 0h24v24H0z" />
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </span>
+                      Edit
+                    </button>
+                    <button
+                      v-if="
+                        isCurrentMessageDetailsVisible(message) && editedMessage
+                      "
+                      class="mr-2 text-gray-400 cursor-pointer "
+                      @click="onUpdateMessage"
+                    >
+                      Update
+                    </button>
+                    <button
+                      v-if="
+                        isCurrentMessageDetailsVisible(message) && editedMessage
+                      "
+                      class="mr-2 text-gray-400 cursor-pointer"
+                      @click="onCancelMessage"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      v-if="isCurrentMessageDetailsVisible(message)"
+                      class="mr-2 text-gray-400 cursor-pointer"
+                      @click="onDeleteMessage(message)"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="w-4 h-4"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        fill="none"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <path stroke="none" d="M0 0h24v24H0z" />
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -155,6 +193,7 @@
       </div>
       <div class="ml-6">
         <button
+          :disabled="editedMessage"
           class="flex items-center justify-center h-10 w-10 rounded-full bg-gray-200 hover:bg-gray-300 text-indigo-800 text-white"
         >
           <svg
@@ -187,6 +226,7 @@ export default {
       currentMessage: "",
       nickname: "You",
       currentMessageIndex: "",
+      editedMessage: null,
       database: firebase.database()
     };
   },
@@ -204,6 +244,13 @@ export default {
       );
       const index = this.messages.indexOf(deletedMessage);
       this.messages.splice(index, 1);
+    });
+
+    ref.on("child_changed", snapshot => {
+      const updatedMessage = this.messages.find(
+        message => message.id === snapshot.key
+      );
+      updatedMessage.text = snapshot.val().text;
     });
   },
 
@@ -237,6 +284,25 @@ export default {
         .ref("messages")
         .child(message.id)
         .remove();
+    },
+
+    onUpdateMessage() {
+      this.database
+        .ref("messages")
+        .child(this.editedMessage.id)
+        .update({ text: this.editedMessage.text });
+
+      this.onCancelMessage();
+    },
+
+    onCancelMessage() {
+      this.editedMessage = null;
+      this.currentMessage = "";
+    },
+
+    onEditMessage(message) {
+      this.editedMessage = message;
+      this.currentMessage = message.text;
     }
   }
 };
